@@ -1,0 +1,79 @@
+sum(is.na(df_train[,100]))
+
+#Step 2: Identify and treat missing values
+
+sapply(1:ncol(df_train), function(x) sum(is.na(df_train[,x])))
+
+#Replace mising values with zeroes.
+df_train[is.na(df_train)] <- 0
+df_test[is.na(df_test)] <- 0
+
+df_train[,c(1, 3:7)] <- NULL
+str(df_train)
+
+df_train$user_name <- as.factor(df_train$user_name)
+df_test$user_name <- as.factor(df_test$user_name)
+df_train$classe <- as.factor(df_train$classe)
+
+#Find the features which have SPACES in the first observation. Do not select those features.
+training_in <- df_train[1,] != ""
+df_train <- df_train[,training_in]
+
+var_train <- grep("^var",colnames(df_train))
+df_train <- df_train[, -var_train]
+
+#Remove highly correlated features
+
+library(corrplot)
+library(caret)
+cor1 <- cor(df_train[,-ncol(df_train)], use = "pairwise")
+hc <- findCorrelation(cor1, cutoff = 0.6)
+hc <- sort(hc)
+df_train_new <- df_train[, -c(hc)]
+dim(df_train_new)
+cor1 <- cor(df_train_new[, -ncol(df_train_new)], use = "pairwise")
+#corrplot(cor1, method = "circle", type = "upper")
+
+
+set.seed(1000)
+
+#Create in-flight training and test data from teh training data.
+
+inTrain <- createDataPartition(y = df_train_new$classe, p = 0.75, list = FALSE)
+
+tempTrain <- df_train_new[inTrain,]
+tempTest <- df_train_new[-inTrain,]
+
+
+table(tempTrain$classe)
+#Model1: tree based models
+
+#preProcessing
+preObj <- preProcess(tempTrain[, -ncol(tempTrain)], method = c("center", "scale"))
+tempTrain_proc <- predict(preObj, tempTrain)
+tempTest_proc <- predict(preObj, tempTest)
+model1 <- train(classe ~., data = tempTrain, method = "rpart")
+
+predict(model1, newdata = tempTest_proc)
+
+confusionMatrix(predict(model1, newdata = tempTest), tempTest$classe)
+
+
+
+summary(temp_belt_df)
+
+#The field amplitude_yaw_belt is all zeroes. Remove this as well.
+
+temp_belt_df$amplitude_yaw_belt <- NULL
+
+str(temp_belt_df)
+#Now we have all data available for belt. Lets get correlation coefficients for these.
+
+cor_coef <- cor(temp_belt_df)
+
+corrplot(cor_coef, method = "square", type = "upper")
+
+new_var <- findCorrelation(cor_coef, cutoff = 0.9, verbose = FALSE, names = FALSE,
+                exact = TRUE)
+
+corrplot(cor(temp_belt_df[,new_var]), method = "square", type = "upper")

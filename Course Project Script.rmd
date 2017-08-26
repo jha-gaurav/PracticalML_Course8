@@ -1,0 +1,54 @@
+---
+title: 'Predict quality of Exercise: Course Project'
+author: "Gaurav Jha"
+date: "26 August 2017"
+output: html_document
+---
+
+#Introduction
+
+The world today is running towards digitalization at a very fast pace, and so does the people. Apart from running, the people also do a lot more to stay healthy, and ironically, there are quantitaive measurements for how much they have done,over a period of time. Along with that, there are gadgets, like $Jawbone Up, Nike FuelBand, and Fitbit$, which tell us the qualitative aspect of the exercises, i.e. how effective or ineffective the exercise was.
+
+This project report is to evaluate, given a set of exercises classified as good or bad, whether the data provided for a new exercise was good or bad.
+
+#Getting the data
+
+$Ref:$ http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har
+
+The training and test data is available at the following links.
+
+training: https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+test: https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+The training data has 19622 observations while the test data has 20 observations, each of them having 160 features. The 'classe' of exercise is categorized as {'A', 'B', 'C', 'D', 'E'}, where only 'A' is the effective one while others are not.
+
+####Cleaning the data
+
+Since many of the features have 'NA' values, they will be dropped. This is because replacing them with any value will increase teh bias in the dataset. Alongside these features, any features that satisfy the following conditions will also be dropped, as they will not be helpful for any model building.
+
+1. Features that are unique for every observation.
+
+2. Features which have SPACES for most of the observations. (These will be considered as NA's)
+
+All these changes will be done in the training dataset only.
+
+####Data Split
+
+Once the data is cleansed using the above steps, the training data is partitined into training and test datasets. 75% of the values are kept as training and 25% are kept as test dataset.
+
+####Model Selection
+
+Now we are ready to build the model.
+
+This is a classification problem, hence the following algorithms can be used. (Logistic Regression cannot be used because it is used only for two class outcomes where we have 5 in our problem)
+
+1. Decision tree
+
+2. Gradient Boosting Model
+
+The above models will be built with a cross-validation technique for increasing accuracy. The cross-validation will be taken care, as a default, by the caret-package train() function.
+
+The accuracy with 'Decision tree' is ~49% and with GBM is ~96%. The predictions with the supplied test data is done using the GBM model, which resulted in 100% accuracy.
+
+
