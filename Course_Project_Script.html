@@ -131,23 +131,156 @@ $(document).ready(function () {
 </div>
 <div id="getting-the-data" class="section level1">
 <h1>Getting the data</h1>
+<pre class="r"><code>library(caret)</code></pre>
+<pre><code>## Loading required package: lattice</code></pre>
+<pre><code>## Loading required package: ggplot2</code></pre>
+<pre class="r"><code>library(ggplot2)
+library(randomForest)</code></pre>
+<pre><code>## randomForest 4.6-12</code></pre>
+<pre><code>## Type rfNews() to see new features/changes/bug fixes.</code></pre>
+<pre><code>## 
+## Attaching package: 'randomForest'</code></pre>
+<pre><code>## The following object is masked from 'package:ggplot2':
+## 
+##     margin</code></pre>
+<pre class="r"><code>library(corrplot)
+library(rpart)
+library(plyr)
+
+set.seed(1000)</code></pre>
 <p><span class="math inline">\(Ref:\)</span> <a href="http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har" class="uri">http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har</a></p>
 <p>The training and test data is available at the following links.</p>
 <p>training: <a href="https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv" class="uri">https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv</a></p>
 <p>test: <a href="https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv" class="uri">https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv</a></p>
+<pre class="r"><code>#Step 1: Get the data
+
+mainDir &lt;- getwd()
+subDir &lt;- &quot;outputDirectory&quot;
+
+if (!file.exists(subDir)){
+        dir.create(file.path(mainDir, subDir))
+}
+
+if(!file.exists(&quot;outputDirectory/training.csv&quot;)){
+        fileURL_train &lt;- &quot;https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv&quot;
+        download.file(fileURL_train, destfile = &quot;outputDirectory/training.csv&quot;)
+        
+}
+
+if(!file.exists(&quot;outputDirectory/test.csv&quot;)){
+        fileURL_test &lt;- &quot;https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv&quot;
+        download.file(fileURL_test, destfile = &quot;outputDirectory/test.csv&quot;)
+        
+}
+
+df_train &lt;- read.csv(&quot;outputDirectory/training.csv&quot;, stringsAsFactors = FALSE)
+df_test &lt;- read.csv(&quot;outputDirectory/test.csv&quot;, stringsAsFactors = FALSE)
+
+dim(df_train)</code></pre>
+<pre><code>## [1] 19622   160</code></pre>
 <p>The training data has 19622 observations while the test data has 20 observations, each of them having 160 features. The ‘classe’ of exercise is categorized as {‘A’, ‘B’, ‘C’, ‘D’, ‘E’}, where only ‘A’ is the effective one while others are not.</p>
 <div id="cleaning-the-data" class="section level4">
 <h4>Cleaning the data</h4>
-<p>Since many of the features have ‘NA’ values, they will be dropped. This is because replacing them with any value will increase teh bias in the dataset. Alongside these features, any features that satisfy the following conditions will also be dropped, as they will not be helpful for any model building.</p>
+<p>Since many of the features have ‘NA’ values, they will be dropped. This is because replacing them with any value will increase the bias in the dataset. Alongside these features, any features that satisfy the following conditions will also be dropped, as they will not be helpful for any model building.</p>
 <ol style="list-style-type: decimal">
 <li><p>Features that are unique for every observation.</p></li>
 <li><p>Features which have SPACES for most of the observations. (These will be considered as NA’s)</p></li>
 </ol>
 <p>All these changes will be done in the training dataset only.</p>
+<pre class="r"><code>df_train &lt;- df_train[, -c(1, 3:7)]
+df_train$user_name &lt;- as.factor(df_train$user_name)
+df_train$classe &lt;- as.factor(df_train$classe)
+
+#Create training and test datasets from the training datasets.
+
+for(i in 1:ncol(df_train)){
+        
+        if(class(df_train[,i]) == &quot;character&quot;){
+                
+                df_train[,i] &lt;- as.numeric(df_train[,i])
+        }
+}</code></pre>
+<pre><code>## Warning: NAs introduced by coercion
+
+## Warning: NAs introduced by coercion
+
+## Warning: NAs introduced by coercion
+
+## Warning: NAs introduced by coercion
+
+## Warning: NAs introduced by coercion
+
+## Warning: NAs introduced by coercion
+
+## Warning: NAs introduced by coercion
+
+## Warning: NAs introduced by coercion
+
+## Warning: NAs introduced by coercion
+
+## Warning: NAs introduced by coercion
+
+## Warning: NAs introduced by coercion
+
+## Warning: NAs introduced by coercion
+
+## Warning: NAs introduced by coercion
+
+## Warning: NAs introduced by coercion
+
+## Warning: NAs introduced by coercion
+
+## Warning: NAs introduced by coercion
+
+## Warning: NAs introduced by coercion
+
+## Warning: NAs introduced by coercion
+
+## Warning: NAs introduced by coercion
+
+## Warning: NAs introduced by coercion
+
+## Warning: NAs introduced by coercion
+
+## Warning: NAs introduced by coercion
+
+## Warning: NAs introduced by coercion
+
+## Warning: NAs introduced by coercion
+
+## Warning: NAs introduced by coercion
+
+## Warning: NAs introduced by coercion
+
+## Warning: NAs introduced by coercion
+
+## Warning: NAs introduced by coercion
+
+## Warning: NAs introduced by coercion
+
+## Warning: NAs introduced by coercion
+
+## Warning: NAs introduced by coercion
+
+## Warning: NAs introduced by coercion
+
+## Warning: NAs introduced by coercion</code></pre>
+<pre class="r"><code>num_na &lt;- sapply(1:ncol(df_train), function(x) sum(is.na(df_train[,x])))
+
+df_train_new &lt;- df_train[, num_na == 0]</code></pre>
 </div>
 <div id="data-split" class="section level4">
 <h4>Data Split</h4>
 <p>Once the data is cleansed using the above steps, the training data is partitined into training and test datasets. 75% of the values are kept as training and 25% are kept as test dataset.</p>
+<pre class="r"><code>inTrain &lt;- createDataPartition(y = df_train_new$classe, p = 0.75, list = FALSE)
+
+tempTrain &lt;- df_train_new[inTrain,]
+tempTest &lt;- df_train_new[-inTrain,]
+
+table(tempTrain$classe)</code></pre>
+<pre><code>## 
+##    A    B    C    D    E 
+## 4185 2848 2567 2412 2706</code></pre>
 </div>
 <div id="model-selection" class="section level4">
 <h4>Model Selection</h4>
@@ -157,8 +290,72 @@ $(document).ready(function () {
 <li><p>Decision tree</p></li>
 <li><p>Gradient Boosting Model</p></li>
 </ol>
-<p>The above models will be built with a cross-validation technique for increasing accuracy. The cross-validation will be taken care, as a default, by the caret-package train() function.</p>
-<p>The accuracy with ‘Decision tree’ is ~49% and with GBM is ~96%. The predictions with the supplied test data is done using the GBM model, which resulted in 100% accuracy.</p>
+<pre class="r"><code>model1 &lt;- train(classe ~., data = tempTrain, method = &quot;rpart&quot;, trControl = trainControl(method = &quot;cv&quot;))
+
+model3 &lt;- train(classe ~., data = tempTrain, method = &quot;gbm&quot;, verbose = FALSE, trControl = trainControl(method = &quot;cv&quot;))</code></pre>
+<pre><code>## Loading required package: gbm</code></pre>
+<pre><code>## Loading required package: survival</code></pre>
+<pre><code>## 
+## Attaching package: 'survival'</code></pre>
+<pre><code>## The following object is masked from 'package:caret':
+## 
+##     cluster</code></pre>
+<pre><code>## Loading required package: splines</code></pre>
+<pre><code>## Loading required package: parallel</code></pre>
+<pre><code>## Loaded gbm 2.1.3</code></pre>
+<pre class="r"><code>print(model1)</code></pre>
+<pre><code>## CART 
+## 
+## 14718 samples
+##    53 predictor
+##     5 classes: 'A', 'B', 'C', 'D', 'E' 
+## 
+## No pre-processing
+## Resampling: Cross-Validated (10 fold) 
+## Summary of sample sizes: 13246, 13245, 13248, 13246, 13247, 13247, ... 
+## Resampling results across tuning parameters:
+## 
+##   cp          Accuracy   Kappa     
+##   0.04144118  0.4763573  0.31198685
+##   0.04260894  0.4424519  0.25531246
+##   0.11696573  0.3074441  0.03549476
+## 
+## Accuracy was used to select the optimal model using  the largest value.
+## The final value used for the model was cp = 0.04144118.</code></pre>
+<pre class="r"><code>print(model3)</code></pre>
+<pre><code>## Stochastic Gradient Boosting 
+## 
+## 14718 samples
+##    53 predictor
+##     5 classes: 'A', 'B', 'C', 'D', 'E' 
+## 
+## No pre-processing
+## Resampling: Cross-Validated (10 fold) 
+## Summary of sample sizes: 13248, 13246, 13246, 13247, 13247, 13244, ... 
+## Resampling results across tuning parameters:
+## 
+##   interaction.depth  n.trees  Accuracy   Kappa    
+##   1                   50      0.7488753  0.6817201
+##   1                  100      0.8197406  0.7718134
+##   1                  150      0.8548673  0.8163091
+##   2                   50      0.8552051  0.8165664
+##   2                  100      0.9067762  0.8820442
+##   2                  150      0.9313047  0.9130627
+##   3                   50      0.8963142  0.8687267
+##   3                  100      0.9425162  0.9272597
+##   3                  150      0.9621530  0.9521152
+## 
+## Tuning parameter 'shrinkage' was held constant at a value of 0.1
+## 
+## Tuning parameter 'n.minobsinnode' was held constant at a value of 10
+## Accuracy was used to select the optimal model using  the largest value.
+## The final values used for the model were n.trees = 150,
+##  interaction.depth = 3, shrinkage = 0.1 and n.minobsinnode = 10.</code></pre>
+</div>
+<div id="model-descriptions-and-inferences." class="section level4">
+<h4>Model Descriptions and Inferences.</h4>
+<p>The preprocessing of the data is done using the cross-validation technique, as a part of the trainControl function.</p>
+<p>The accuracy with ‘Decision tree’ is 47.63% and with GBM is ~96.2%. This gives an out-of-sample error of 52.37 and 3.8% respectively.</p>
 </div>
 </div>
 
